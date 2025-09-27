@@ -3,15 +3,36 @@ from typing import Literal, Optional
 import re
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+# Role hanya boleh admin atau staff
 Role = Literal["admin", "staff"]
 
+# Aturan username: huruf kecil + angka, 6-15 karakter
 USERNAME_REGEX = r"^[a-z0-9]{6,15}$"
+
+# Aturan password: huruf, angka, simbol ! atau @
 ALLOWED_CHARS = re.compile(r"^[A-Za-z\d!@]+$")
+
+
+# --- Validator khusus email ---
+def _ensure_gmail(email: str) -> str:
+    # Email sudah valid format karena EmailStr
+    if not email.lower().endswith("@gmail.com"):
+        raise ValueError("email domain must be gmail.com")
+    return email
+
 
 class UserBase(BaseModel):
     username: str = Field(pattern=USERNAME_REGEX)
     email: EmailStr
     role: Role
+
+    # cek domain email harus gmail
+    @field_validator("email")
+    @classmethod
+    def email_must_be_gmail(cls, v: EmailStr) -> EmailStr:
+        _ensure_gmail(str(v))
+        return v
+
 
 class UserCreate(UserBase):
     password: str
@@ -19,13 +40,10 @@ class UserCreate(UserBase):
     @field_validator("password")
     @classmethod
     def validate_password(cls, v: str) -> str:
-        # panjang
         if not (8 <= len(v) <= 20):
             raise ValueError("password length must be 8–20")
-        # karakter yang diizinkan saja
         if not ALLOWED_CHARS.fullmatch(v):
             raise ValueError("password may contain only letters, digits, and ! or @")
-        # komposisi: kecil, besar, digit, spesial
         if not any(c.islower() for c in v):
             raise ValueError("password must contain a lowercase letter")
         if not any(c.isupper() for c in v):
@@ -36,15 +54,26 @@ class UserCreate(UserBase):
             raise ValueError("password must contain ! or @")
         return v
 
+
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(default=None, pattern=USERNAME_REGEX)
     email: Optional[EmailStr] = None
     role: Optional[Role] = None
 
+    @field_validator("email")
+    @classmethod
+    def email_must_be_gmail_optional(cls, v: EmailStr | None) -> EmailStr | None:
+        if v is None:
+            return v
+        _ensure_gmail(str(v))
+        return v
+
+
 class UserOut(UserBase):
     id: str
     created_at: datetime
     updated_at: datetime
+
 
 class PasswordChange(BaseModel):
     current_password: str
@@ -53,7 +82,6 @@ class PasswordChange(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, v: str) -> str:
-        # pakai aturan yang sama seperti di atas
         if not (8 <= len(v) <= 20):
             raise ValueError("password length must be 8–20")
         if not ALLOWED_CHARS.fullmatch(v):
@@ -68,7 +96,8 @@ class PasswordChange(BaseModel):
             raise ValueError("password must contain ! or @")
         return v
 
-# Model internal penyimpanan (dengan hash password)
+
+# Model internal penyimpanan (password disimpan sebagai hash)
 class _UserInDB(UserBase):
     id: str
     password_hash: str
