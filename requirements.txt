@@ -1,0 +1,18 @@
+# install semua package dengan:
+# pip install -r requirements.txt
+
+# Web framework utama
+fastapi
+
+# Server ASGI untuk jalanin FastAPI
+uvicorn
+
+# Hashing password
+bcrypt
+
+# Unit testing
+pytest
+httpx
+
+# Validasi email (EmailStr Pydantic)
+email-validator
