@@ -15,7 +15,6 @@ ALLOWED_CHARS = re.compile(r"^[A-Za-z\d!@]+$")
 
 # --- Validator khusus email ---
 def _ensure_gmail(email: str) -> str:
-    # Email sudah valid format karena EmailStr
     if not email.lower().endswith("@gmail.com"):
         raise ValueError("email domain must be gmail.com")
     return email
@@ -26,7 +25,6 @@ class UserBase(BaseModel):
     email: EmailStr
     role: Role
 
-    # cek domain email harus gmail
     @field_validator("email")
     @classmethod
     def email_must_be_gmail(cls, v: EmailStr) -> EmailStr:
@@ -36,6 +34,17 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "username": "ayu123",
+                "email": "ayu@gmail.com",
+                "password": "Aa1!aaaa",
+                "role": "staff"
+            }
+        }
+    }
 
     @field_validator("password")
     @classmethod
@@ -73,6 +82,19 @@ class UserOut(UserBase):
     id: str
     created_at: datetime
     updated_at: datetime
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": "8f1a2b1c-7b26-4a2c-83c6-2f6c2e0de9ab",
+                "username": "ayu123",
+                "email": "ayu@gmail.com",
+                "role": "staff",
+                "created_at": "2025-09-29T10:00:00Z",
+                "updated_at": "2025-09-29T10:00:00Z"
+            }
+        }
+    }
 
 
 class PasswordChange(BaseModel):
